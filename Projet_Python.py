@@ -1,73 +1,106 @@
+# Importation des modules
 import streamlit as st
-import pickle
+import pandas as pd
 import numpy as np
+import pickle
 
-# Charger le modèle sauvegardé
-with open("covid19_clf.pkl", "rb") as file:
-    model = pickle.load(file)
+# Configuration des options Streamlit
+st.set_page_config(layout="wide")
 
-# Configuration de la page Streamlit
-st.set_page_config(
-    page_title="Prédiction COVID-19 - Modèle de Risque",
-    page_icon="🩺",
-    layout="centered"
-)
+# Fonction pour recueillir les caractéristiques utilisateur via la barre latérale
+def caracteristiques_utilisateur():
+    st.sidebar.header("Caractéristiques du Patient")
 
-# Titre principal
-st.title("Prédiction du Risque COVID-19")
+    # Sélection des caractéristiques par l'utilisateur
+    sex = st.sidebar.selectbox("Sexe", options=["Femme", "Homme"])
+    age = st.sidebar.slider("Âge du patient", min_value=0, max_value=120, value=30)
+    patient_type = st.sidebar.selectbox("Type de patient", options=["Non hospitalisé", "Hospitalisé"])
+    pneumonia = st.sidebar.selectbox("Pneumonie", options=["Non", "Oui"])
+    diabetes = st.sidebar.selectbox("Diabète", options=["Non", "Oui"])
+    copd = st.sidebar.selectbox("Bronchopneumopathie chronique obstructive (COPD)", options=["Non", "Oui"])
+    asthma = st.sidebar.selectbox("Asthme", options=["Non", "Oui"])
+    inmsupr = st.sidebar.selectbox("Immunodéprimé", options=["Non", "Oui"])
+    hypertension = st.sidebar.selectbox("Hypertension", options=["Non", "Oui"])
+    cardiovascular = st.sidebar.selectbox("Maladies cardiovasculaires", options=["Non", "Oui"])
+    renal_chronic = st.sidebar.selectbox("Maladies rénales chroniques", options=["Non", "Oui"])
+    other_disease = st.sidebar.selectbox("Autres maladies", options=["Non", "Oui"])
+    obesity = st.sidebar.selectbox("Obésité", options=["Non", "Oui"])
+    tobacco = st.sidebar.selectbox("Tabagisme", options=["Non", "Oui"])
+    intubed = st.sidebar.selectbox("Patient intubé", options=["Non", "Oui"])
+    icu = st.sidebar.selectbox("Admission en soins intensifs", options=["Non", "Oui"])
+
+    # Création d'un dictionnaire pour stocker les données
+    donnees = {
+        'sex': sex,
+        'age': age,
+        'patient_type': patient_type,
+        'pneumonia': pneumonia,
+        'diabetes': diabetes,
+        'copd': copd,
+        'asthma': asthma,
+        'inmsupr': inmsupr,
+        'hypertension': hypertension,
+        'cardiovascular': cardiovascular,
+        'renal_chronic': renal_chronic,
+        'other_disease': other_disease,
+        'obesity': obesity,
+        'tobacco': tobacco,
+        'intubed': intubed,
+        'icu': icu
+    }
+
+    # Conversion en DataFrame
+    caracteristiques = pd.DataFrame(donnees, index=[0])
+    return caracteristiques
+
+# Introduction de l'application web
 st.write("""
-Bienvenue dans l'outil de prédiction pour évaluer le risque COVID-19 basé sur des facteurs médicaux.
-Veuillez remplir les informations ci-dessous pour obtenir une évaluation.
+# Application Web : Prédiction du Risque COVID-19
+## À propos de cette application :
+Cette application utilise un modèle de classification entraîné pour prédire si un patient est à **haut risque** ou **faible risque** de complications liées au COVID-19.
 """)
 
-# Liste des variables d'entrée (hors RESULTAT_TEST)
-sex = st.selectbox("Sexe :", options=["Femme", "Homme"])
-age = st.slider("Âge du patient :", min_value=0, max_value=120, value=30, step=1)
-patient_type = st.selectbox("Type de patient :", options=["Non hospitalisé", "Hospitalisé"])
-pneumonia = st.selectbox("Pneumonie :", options=["Non", "Oui"])
-diabetes = st.selectbox("Diabète :", options=["Non", "Oui"])
-copd = st.selectbox("Bronchopneumopathie chronique obstructive (COPD) :", options=["Non", "Oui"])
-asthma = st.selectbox("Asthme :", options=["Non", "Oui"])
-inmsupr = st.selectbox("Immunodéprimé :", options=["Non", "Oui"])
-hipertension = st.selectbox("Hypertension :", options=["Non", "Oui"])
-cardiovascular = st.selectbox("Maladies cardiovasculaires :", options=["Non", "Oui"])
-renal_chronic = st.selectbox("Maladies rénales chroniques :", options=["Non", "Oui"])
-other_disease = st.selectbox("Autres maladies :", options=["Non", "Oui"])
-obesity = st.selectbox("Obésité :", options=["Non", "Oui"])
-tobacco = st.selectbox("Tabagisme :", options=["Non", "Oui"])
-intubed = st.selectbox("Patient intubé :", options=["Non", "Oui"])
-icu = st.selectbox("Admission en soins intensifs :", options=["Non", "Oui"])
+# Collecte des caractéristiques utilisateur
+df_entree = caracteristiques_utilisateur()
 
-# Conversion des entrées utilisateur en format numérique pour le modèle
+# Encodage des variables catégoriques pour le modèle
 def encode_input(value, positive="Oui", negative="Non"):
     return 1 if value == positive else 2  # "Oui" = 1, "Non" = 2
 
-input_data = np.array([
-    1 if sex == "Homme" else 2,  # SEX : Homme = 1, Femme = 2
-    age,  # AGE
-    1 if patient_type == "Hospitalisé" else 2,  # PATIENT_TYPE : Hospitalisé = 1, Non hospitalisé = 2
-    encode_input(pneumonia),  # PNEUMONIA
-    encode_input(diabetes),  # DIABETES
-    encode_input(copd),  # COPD
-    encode_input(asthma),  # ASTHMA
-    encode_input(inmsupr),  # INMSUPR
-    encode_input(hipertension),  # HIPERTENSION
-    encode_input(cardiovascular),  # CARDIOVASCULAR
-    encode_input(renal_chronic),  # RENAL_CHRONIC
-    encode_input(other_disease),  # OTHER_DISEASE
-    encode_input(obesity),  # OBESITY
-    encode_input(tobacco),  # TOBACCO
-    encode_input(intubed),  # INTUBED
-    encode_input(icu)  # ICU
-]).reshape(1, -1)
+df_entree_encoded = df_entree.copy()
+df_entree_encoded['sex'] = df_entree_encoded['sex'].apply(lambda x: 1 if x == "Femme" else 2)
+df_entree_encoded['patient_type'] = df_entree_encoded['patient_type'].apply(lambda x: 1 if x == "Hospitalisé" else 2)
+for col in [
+    'pneumonia', 'diabetes', 'copd', 'asthma', 'inmsupr', 'hypertension',
+    'cardiovascular', 'renal_chronic', 'other_disease', 'obesity', 'tobacco', 
+    'intubed', 'icu'
+]:
+    df_entree_encoded[col] = df_entree_encoded[col].apply(lambda x: encode_input(x))
 
-# Bouton pour prédire
-if st.button("Prédire le risque"):
-    # Effectuer la prédiction
-    prediction = model.predict(input_data)[0]  # Prédiction du modèle
-    risk = "Haut risque" if prediction == 1 else "Faible risque"
-    
-    # Afficher le résultat
-    st.subheader("Résultat de la prédiction")
-    st.success(f"Le patient est classé comme : **{risk}**")
-    st.info("Veuillez consulter un professionnel de santé pour une évaluation approfondie.")
+# Chargement du modèle de classification
+with open("covid19_clf.pkl", "rb") as fichier:
+    classifieur_charge = pickle.load(fichier)
+
+# Vérifier les noms des caractéristiques attendus par le modèle
+print("Noms des caractéristiques attendus par le modèle :", classifieur_charge.feature_names_in_)
+
+# Renommer les colonnes pour correspondre aux noms attendus
+df_entree_encoded.columns = classifieur_charge.feature_names_in_
+
+# Affichage des caractéristiques utilisateur
+st.subheader("Caractéristiques d'Entrée")
+st.dataframe(df_entree)
+
+# Application du modèle pour prédire
+prediction = classifieur_charge.predict(df_entree_encoded)
+probabilites_prediction = classifieur_charge.predict_proba(df_entree_encoded)
+
+# Résultat de la prédiction
+st.subheader("Prédiction")
+risque = "Haut risque" if prediction[0] == 1 else "Faible risque"
+st.write(f"**{risque}**")
+
+# Probabilités associées à la prédiction
+st.subheader("Probabilités de Prédiction")
+df_probabilites = pd.DataFrame(probabilites_prediction, columns=["Haut risque", "Faible risque"])
+st.dataframe(df_probabilites)
